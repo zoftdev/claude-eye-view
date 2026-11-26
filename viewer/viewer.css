@@ -5921,3 +5921,28 @@ html[data-ambient-motion="running"][data-motion="live"]:not([data-motion-owner])
   }
   .focus-chip[data-explaining="true"] { overflow: hidden; }
 }
+
+/* Hover explain (claude-eye-view mod): clickless node explanation in a viewport corner. */
+.archify-hover-explain {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(380px, calc(100vw - 32px));
+  max-height: 45vh;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg) 50%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+.archify-hover-explain[hidden] { display: none; }
+.archify-hover-explain-title { font-weight: 600; margin-bottom: 4px; }
+.archify-hover-explain p { margin: 0 0 6px; white-space: pre-line; }
+.archify-hover-explain p:last-child { margin-bottom: 0; }
+@media print { .archify-hover-explain { display: none !important; } }

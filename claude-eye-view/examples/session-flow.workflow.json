@@ -1,0 +1,208 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "CSV Import Feature - How the Session Moved",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "claude-eye-view/examples/session-flow.html"
+  },
+  "lanes": [
+    {
+      "id": "dir",
+      "label": "Direction (user calls)"
+    },
+    {
+      "id": "work",
+      "label": "Build and test"
+    },
+    {
+      "id": "block",
+      "label": "Blocker and workaround",
+      "variant": "exception"
+    },
+    {
+      "id": "side",
+      "label": "Side sessions"
+    }
+  ],
+  "phases": [
+    {
+      "id": "ask",
+      "label": "Question",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "drill",
+      "label": "Drill down",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "ship",
+      "label": "Ship",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "d_ask",
+    "d_scope",
+    "d_stream",
+    "d_ship"
+  ],
+  "nodes": [
+    {
+      "id": "d_ask",
+      "lane": "dir",
+      "col": 0,
+      "type": "external",
+      "label": "Import CSV?",
+      "sublabel": "users upload orders",
+      "icon": "start",
+      "explanation": "The user asked for a CSV upload so shop staff can import orders in bulk instead of typing them.\n\nKnown at this point: files come from a spreadsheet export, up to about 200k rows; the orders table already has validation in the API layer.\n\nNothing was decided yet about sync vs background processing."
+    },
+    {
+      "id": "d_scope",
+      "lane": "dir",
+      "col": 1,
+      "type": "backend",
+      "label": "Validate first",
+      "sublabel": "reject bad rows early",
+      "icon": "decision",
+      "explanation": "User call: show row-level errors before anything is written, so staff can fix the sheet and retry.\n\nWhy: a half-imported file was the main complaint with the old tool.\n\nRejected: 'import what you can and report the rest' \u2014 harder to undo."
+    },
+    {
+      "id": "w_parse",
+      "lane": "work",
+      "col": 2,
+      "type": "backend",
+      "label": "Parse in memory",
+      "sublabel": "pandas read_csv",
+      "explanation": "First approach: load the whole file with pandas and validate with the existing schema.\n\nWorked on the 1k-row sample in 0.4 s."
+    },
+    {
+      "id": "b_oom",
+      "lane": "block",
+      "col": 3,
+      "type": "security",
+      "label": "OOM at 200k",
+      "sublabel": "worker killed at 1.9 GB",
+      "icon": "failure",
+      "explanation": "The 200k-row test file killed the worker (memory limit 2 GB; peak 1.9 GB before the kill).\n\nCause: whole-file DataFrame plus a copy per validation pass.\n\nThis is the turn that changed the design."
+    },
+    {
+      "id": "d_stream",
+      "lane": "dir",
+      "col": 3,
+      "type": "backend",
+      "label": "Stream rows",
+      "sublabel": "chunks of 5k",
+      "icon": "decision",
+      "explanation": "User call after the OOM: stream the file in 5k-row chunks and run the job in the background.\n\nTrade-off accepted: the error report now arrives by notification, not inline."
+    },
+    {
+      "id": "w_stream",
+      "lane": "work",
+      "col": 4,
+      "type": "backend",
+      "label": "Chunked import",
+      "sublabel": "peak 180 MB",
+      "explanation": "Rewrote the import as a generator over csv.DictReader with 5k-row chunks.\n\n200k rows: peak 180 MB, 38 s end to end. Row errors collected to a CSV the user can download."
+    },
+    {
+      "id": "s_review",
+      "lane": "side",
+      "col": 4,
+      "type": "messagebus",
+      "label": "Review session",
+      "sublabel": "2 findings fixed",
+      "explanation": "A separate review session read the diff and found two issues: BOM at the start of Excel exports broke the header match, and a chunk boundary could split a duplicate check.\n\nBoth fixed here with tests."
+    },
+    {
+      "id": "d_ship",
+      "lane": "dir",
+      "col": 5,
+      "type": "security",
+      "label": "Merge?",
+      "sublabel": "waiting for user",
+      "tag": "open",
+      "icon": "waiting",
+      "explanation": "Open: the PR is ready and tests pass. Waiting for the user to decide whether to ship behind a feature flag first.\n\nNot done: load test on production-size data (only the 200k test file was used)."
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "d_ask",
+      "to": "d_scope",
+      "label": "scope",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e2",
+      "from": "d_scope",
+      "to": "w_parse",
+      "label": "try simple",
+      "role": "branch"
+    },
+    {
+      "id": "e3",
+      "from": "w_parse",
+      "to": "b_oom",
+      "label": "big file",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "e4",
+      "from": "d_scope",
+      "to": "d_stream",
+      "label": "change plan",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e5",
+      "from": "d_stream",
+      "to": "w_stream",
+      "label": "build",
+      "role": "branch"
+    },
+    {
+      "id": "e6",
+      "from": "w_stream",
+      "to": "s_review",
+      "label": "review",
+      "role": "branch",
+      "variant": "dashed"
+    },
+    {
+      "id": "e7",
+      "from": "d_stream",
+      "to": "d_ship",
+      "variant": "emphasis"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Drill path",
+      "items": [
+        "Broad: add CSV import",
+        "Narrow: memory limit forced streaming",
+        "Ship: waiting on a flag decision"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Open now",
+      "items": [
+        "Merge behind a feature flag?",
+        "No production-size load test yet"
+      ]
+    }
+  ]
+}

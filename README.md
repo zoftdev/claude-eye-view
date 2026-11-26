@@ -1,3 +1,14 @@
+> **This is `claude-eye-view`, a fork of [tt-a1i/archify](https://github.com/tt-a1i/archify) (Apache-2.0).**
+> It adds two things on top of upstream:
+> 1. **Hover explain** — point at any node that has an `explanation` and it appears in a semi-transparent box in the
+>    screen corner that does not cover the node (no click). Code: `viewer/hover-explain.js`, styles in `viewer/viewer.css`.
+> 2. **The `claude-eye-view` skill** (`claude-eye-view/SKILL.md`) — Claude draws the conversation you just had as a
+>    workflow: where it started, drilled down, pivoted, got blocked, and what is open; each node's hover shows what Claude
+>    knew there. Demo: `claude-eye-view/examples/session-flow.html`.
+>
+> Install both skills: `npx skills add zoftdev/claude-eye-view` (pick `archify` and `claude-eye-view`), then ask Claude
+> `/claude-eye-view`. Everything below is the upstream README.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/archify-lockup-dark.svg" />
